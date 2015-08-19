@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -147,7 +147,7 @@ class APNClient(PushService):
         self.keyfile = get_filepath(keyfile)
         self.messages = deque()
         self.reconnect = True
-	self.errors = None
+        self.errors = None
         self.ioloop = ioloop.IOLoop.instance()
 
         self.appname = appname
@@ -202,6 +202,24 @@ class APNClient(PushService):
             255     | None
         """
         self.connected = False
+        if (len(data) == 0) and (self.reconnect == True):
+            """
+            if we get a 0 byte response and we're closing
+            we should in theory just re-connect
+            """
+            logging.error('0 byte response recieved. Attempting re-connect')
+            try:
+                self.remote_stream.close()
+                self.sock.close()
+                self.connect()
+            except Exception, ex:
+                raise ex
+            return
+            """
+            We return out of here because we don't want the "normal"
+            reconnect to kick in.
+            """
+
         if len(data) != 6:
             logging.error('response must be a 6-byte binary string.')
         else:
@@ -209,13 +227,13 @@ class APNClient(PushService):
             logging.error('%s[%d] CMD: %s Status: %s ID: %s', self.appname, self.instanceid, command, status_table[statuscode], identifier)
             self.errors = "%s (ID: %s)" % (status_table[statuscode], identifier)
 
-            try:
-                self.remote_stream.close()
-                self.sock.close()
-                if self.reconnect:
-                    self.connect()
-            except Exception, ex:
-                raise ex
+        try:
+            self.remote_stream.close()
+            self.sock.close()
+            if self.reconnect:
+                self.connect()
+        except Exception as ex:
+            raise ex
 
     def _on_remote_connected(self):
         self.connected = True
@@ -295,12 +313,12 @@ class APNClient(PushService):
         return len(self.messages)
 
     def hasError(self):
-	return self.errors is not None
+        return self.errors is not None
 
     def getError(self):
-	temp = self.errors
-	self.errors = None
-	return temp
+        temp = self.errors
+        self.errors = None
+        return temp
 
     def _send_message(self):
         if len(self.messages) and not self.remote_stream.closed():

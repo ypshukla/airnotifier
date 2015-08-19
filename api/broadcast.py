@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from httplib import BAD_REQUEST, LOCKED, FORBIDDEN, NOT_FOUND, \
+from http.client import BAD_REQUEST, LOCKED, FORBIDDEN, NOT_FOUND, \
     INTERNAL_SERVER_ERROR, OK, ACCEPTED
 from routes import route
 from api import APIBaseHandler

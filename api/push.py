@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from httplib import BAD_REQUEST, FORBIDDEN, \
+from http.client import BAD_REQUEST, FORBIDDEN, \
     INTERNAL_SERVER_ERROR, ACCEPTED
 from routes import route
 from api import APIBaseHandler, EntityBuilder
@@ -48,7 +48,7 @@ class PushHandler(APIBaseHandler):
         return data
 
     def get_apns_conn(self):
-        if not self.apnsconnections.has_key(self.app['shortname']):
+        if not self.app['shortname'] in self.apnsconnections:
             self.send_response(INTERNAL_SERVER_ERROR, dict(error="APNs is offline"))
             return
         count = len(self.apnsconnections[self.app['shortname']])
@@ -75,7 +75,7 @@ class PushHandler(APIBaseHandler):
                     try:
                         proc = import_module('hooks.' + data['extra']['processor'])
                         data = proc.process_pushnotification_payload(data)
-                    except Exception, ex:
+                    except Exception as ex:
                         self.send_response(BAD_REQUEST, dict(error=str(ex)))
 
             if not self.token:
@@ -95,7 +95,7 @@ class PushHandler(APIBaseHandler):
                     return
                 try:
                     # TODO check permission to insert
-                    self.db.tokens.insert(token, safe=True)
+                    self.db.tokens.insert(token)
                 except Exception as ex:
                     self.send_response(INTERNAL_SERVER_ERROR, dict(error=str(ex)))
 
@@ -146,7 +146,7 @@ class PushHandler(APIBaseHandler):
                 self.send_response(ACCEPTED)
             else:
                 self.send_response(BAD_REQUEST, dict(error='Invalid device type'))
-        except Exception, ex:
+        except Exception as ex:
             import traceback
             traceback.print_exc()
             self.send_response(INTERNAL_SERVER_ERROR, dict(error=str(ex)))

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -26,10 +26,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from HTMLParser import HTMLParser
+from html.parser import HTMLParser
 import calendar
 import datetime
-import htmlentitydefs
+from html import entities as htmlentitydefs
 import re
 import sys
 import unicodedata
@@ -53,7 +53,7 @@ except ImportError:
 class HTMLTextExtractor(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self)
-        self.result = [ ]
+        self.result = []
 
     def handle_data(self, d):
         self.result.append(d)
@@ -108,7 +108,6 @@ def json_default(obj):
 
 def filter_alphabetanum(string):
     # absolutely alphabeta and number only
-    string = unicodedata.normalize("NFKD", string).encode("ascii", "ignore")
     string = re.sub(r"[^\w]+", " ", string)
     string = "".join(string.lower().strip().split())
     return string
@@ -120,7 +119,7 @@ def get_filepath(filename):
     return os.path.join(os.path.abspath(options.pemdir), filename)
 
 def save_file(req):
-    filename = sha1(req['body']).hexdigest()
+    filename = sha1(req['body'].encode('utf-8')).hexdigest()
     filepath = get_filepath(filename)
     thefile = open(filepath, "w")
     thefile.write(req['body'])

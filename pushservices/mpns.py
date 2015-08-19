@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -35,7 +35,7 @@ from tornado.httpclient import AsyncHTTPClient
 from util import *
 
 import xml.etree.ElementTree as ET
-from cStringIO import StringIO
+from io import StringIO
 
 try:
     register_namespace = ET.register_namespace

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -32,7 +32,7 @@ from tornado.httpclient import AsyncHTTPClient
 import logging
 import time
 import xml.etree.ElementTree as ET
-from cStringIO import StringIO
+from io import StringIO
 try:
     register_namespace = ET.register_namespace
 except AttributeError:
@@ -92,7 +92,7 @@ class WNSClient(PushService):
         accesstoken = responsedata['access_token']
         self.app['wnsaccesstoken'] = accesstoken
         self.app['wnstokenexpiry'] = int(responsedata['expires_in']) + int(time.time())
-        self.masterdb.applications.update({'shortname': self.app['shortname']}, self.app, safe=True)
+        self.masterdb.applications.update({'shortname': self.app['shortname']}, self.app)
         return accesstoken
 
 class WNSBase(object):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -28,7 +28,7 @@
 
 from hashlib import sha1
 
-from pymongo.connection import Connection
+import pymongo
 from pymongo.errors import CollectionInvalid
 from tornado.options import define, options
 import tornado.options
@@ -44,12 +44,12 @@ define("mongohost", default="localhost", help="MongoDB host name")
 define("mongoport", default=27017, help="MongoDB port")
 define("mongodbname", default="airnotifier", help="MongoDB database name")
 define("masterdb", default="airnotifier", help="MongoDB DB to store information")
-
+define("airnotifier_home", default="/opt/airnotifier/", help="Location for airnotifier")
 
 if __name__ == "__main__":
-    tornado.options.parse_config_file("airnotifier.conf")
+    tornado.options.parse_config_file(options.airnotifier_home + "airnotifier.conf")
     tornado.options.parse_command_line()
-    mongodb = Connection(options.mongohost, options.mongoport)
+    mongodb = pymongo.MongoClient(options.mongohost, options.mongoport)
     masterdb = mongodb[options.masterdb]
     collection_names = masterdb.collection_names()
     try:
@@ -72,11 +72,12 @@ if __name__ == "__main__":
     try:
         manager = {}
         manager['username'] = 'admin'
-        manager['password'] = sha1('%sadmin' % options.passwordsalt).hexdigest()
+        password = '{}admin'.format( options.passwordsalt )
+        manager['password'] = sha1(password.encode('utf-8')).hexdigest()
         masterdb['managers'].insert(manager)
         print("Admin user created, username: admin, password: admin")
-    except Exception:
-        print("Failed to create admin user")
+    except Exception as e:
+        print("Failed to create admin user {}".format(e))
 
     try:
         if not 'options' in collection_names:

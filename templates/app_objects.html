@@ -26,7 +26,7 @@
             {% for obj in objects %}
             <tr>
                 <td><strong>{{obj['collection']}}</strong></td>
-                {% if obj.has_key('created') %}
+                {% if 'created' in obj %}
                 <td>{{ obj['created'] }}</td>
                 {% else %}
                 <td></td>

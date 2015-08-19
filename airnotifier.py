@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -28,7 +28,7 @@
 
 import logging.config
 
-from pymongo.connection import Connection
+from pymongo import MongoClient as Connection
 from tornado.options import define
 import tornado.httpserver
 import tornado.ioloop
@@ -57,6 +57,7 @@ define("mongoport", default=27017, help="MongoDB port")
 
 define("masterdb", default="airnotifier", help="MongoDB DB to store information")
 define("dbprefix", default="obj_", help="Collection name prefix")
+define("airnotifier_home", default="/opt/airnotifier/", help="Location for airnotifier")
 
 loggingconfigfile='logging.ini'
 if os.path.isfile(loggingconfigfile):
@@ -69,17 +70,17 @@ class AirNotifierApp(tornado.web.Application):
         return RouteLoader.load(dir)
 
     def get_broadcast_status(self, appname):
-	status = "Notification sent!"
-	error = False
+        status = "Notification sent!"
+        error = False
 
-	try:
-	    apns = self.services['apns'][appname][0]
-	except (IndexError, KeyError):
-	    apns = None
+        try:
+            apns = self.services['apns'][appname][0]
+        except (IndexError, KeyError):
+            apns = None
 
-	if apns is not None and apns.hasError():
-	    status = apns.getError()
-	    error = True
+        if apns is not None and apns.hasError():
+            status = apns.getError()
+            error = True
 
         return {'msg':status, 'error':error}
 
@@ -135,7 +136,7 @@ class AirNotifierApp(tornado.web.Application):
                 elif token['device'] == DEVICE_TYPE_MPNS:
                     if mpns is not None:
                         mpns.process(token=t, alert=alert, extra=extra, mpns=kwargs.get('mpns', {}))
-        except Exception, ex:
+        except Exception as ex:
             logging.error(ex)
 
         # Now sending android notifications
@@ -143,7 +144,7 @@ class AirNotifierApp(tornado.web.Application):
             if (gcm is not None) and regids:
                 response = gcm.process(token=regids, alert=alert, extra=extra, gcm=kwargs.get('gcm', {}))
                 responsedata = response.json()
-        except Exception, ex:
+        except Exception as ex:
             logging.error('GCM problem: ' + str(ex))
 
     def __init__(self, services):
@@ -171,12 +172,11 @@ class AirNotifierApp(tornado.web.Application):
             try:
                 mongodb = Connection(options.mongohost, options.mongoport)
             except:
-                error_log("Cannot not connect to MongoDB")
+                logging.error("Cannot connect to MongoDB")
 
         self.mongodb = mongodb
 
         self.masterdb = mongodb[options.masterdb]
-        assert self.masterdb.connection == self.mongodb
 
     def main(self):
         logging.info("Starting AirNotifier server")
@@ -262,7 +262,7 @@ def init_messaging_agents():
     return services
 
 if __name__ == "__main__":
-    tornado.options.parse_config_file("airnotifier.conf")
+    tornado.options.parse_config_file(options.airnotifier_home + "airnotifier.conf")
     tornado.options.parse_command_line()
     services = init_messaging_agents()
     AirNotifierApp(services=services).main()

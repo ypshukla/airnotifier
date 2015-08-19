@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -99,7 +99,7 @@ class WebBaseHandler(tornado.web.RequestHandler):
         userid = self.get_secure_cookie('user')
         if not userid:
             return None
-        userId = ObjectId(userid)
+        userId = ObjectId(userid.decode('utf-8'))
         user = self.masterdb.managers.find_one({'_id': userId})
         return user
 
@@ -128,7 +128,7 @@ class AppDeletionHandler(WebBaseHandler):
         self.appname = appname
         app = self.masterdb.applications.find_one({'shortname':appname})
         if not app: raise tornado.web.HTTPError(500)
-        self.masterdb.applications.remove({'shortname': appname}, safe=True)
+        self.masterdb.applications.remove({'shortname': appname})
         self.mongodbconnection.drop_database(appname)
         self.redirect(r"/applications")
 
@@ -198,7 +198,7 @@ class InfoHandler(WebBaseHandler):
         airnotifierinfo = {}
         airnotifierinfo['version'] = VERSION
         mongodbinfo = self.application.mongodb.server_info()
-        if mongodbinfo.has_key('versionArray'):
+        if 'versionArray' in mongodbinfo:
             del mongodbinfo['versionArray']
         pythoninfo = {}
         pythoninfo['version'] = sys.version
@@ -232,10 +232,11 @@ class AdminHandler(WebBaseHandler):
             user['created'] = int(time.time())
             user['username'] = self.get_argument('newusername').strip()
             password = self.get_argument('newpassword').strip()
-            passwordhash = sha1("%s%s" % (options.passwordsalt, password)).hexdigest()
+            to_hash = '{}{}'.format( options.passwordsalt, password )
+            passwordhash = sha1(to_hash.encode('utf-8')).hexdigest()
             user['password'] = passwordhash
             user['level'] = "manager"
-            result = self.masterdb.managers.update({'username': user['username']}, user, safe=True, upsert=True)
+            result = self.masterdb.managers.update({'username': user['username']}, user, upsert=True)
             managers = self.masterdb.managers.find()
             if result['updatedExisting']:
                 self.render('managers.html', managers=managers, updated=user, created=None, currentuser=self.currentuser)
@@ -243,7 +244,8 @@ class AdminHandler(WebBaseHandler):
                 self.render('managers.html', managers=managers, updated=None, created=user, currentuser=self.currentuser)
         elif action == 'changepassword':
             password = self.get_argument('newpassword').strip()
-            passwordhash = sha1("%s%s" % (options.passwordsalt, password)).hexdigest()
+            temp = '{}{}'.format(options.passwordsalt, password)
+            passwordhash = sha1(temp.encode('utf-8')).hexdigest()
             self.masterdb.managers.update({"username": self.currentuser['username']}, {"$set": {"password": passwordhash}})
             managers = self.masterdb.managers.find()
             user = self.currentuser

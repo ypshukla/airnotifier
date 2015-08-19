@@ -39,12 +39,12 @@
             <tr>
                 <td><code>{{key['key']}}</code></td>
                 <td>
-                    {% if key.has_key('description') %}
+                    {% if 'description' in key %}
                     <span class="label label-success">{{ key['description'] }}</span>
                     {% end %}
                 </td>
                 <td>
-				{% if key.has_key('permission') %}
+				{% if 'permission' in key %}
 					<ul class="unstyled">
 					{% for k, value in map %}
 						<li>{% if value[0] & key['permission'] %}<i class="icon-ok"></i>{% else %}<i class="icon-remove"></i>{% end %}<span>{{ value[1] }}</span></li>

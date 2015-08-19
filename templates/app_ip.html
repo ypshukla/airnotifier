@@ -24,7 +24,7 @@
             <label class="control-label" for="keydesc">{{ _('IP to block') }}</label>
             <div class="controls">
                 <textarea rows="10" class="input-xlarge" id="ipaddr" name="blockediplist">
-                    {% if app.has_key('blockediplist') and app['blockediplist'] %}
+                    {% if 'blockediplist' in app and app['blockediplist'] %}
                     {{ app['blockediplist'] }}
                     {% end %}
                 </textarea>

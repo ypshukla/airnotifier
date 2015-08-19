@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -26,9 +26,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from httplib import  FORBIDDEN, OK
+from http.client import  FORBIDDEN, OK
 from importlib import import_module
-import md5
+from hashlib import md5
 import time
 import uuid
 
@@ -57,7 +57,7 @@ class AccessKeysV2Handler(APIBaseHandler):
                 try:
                     proc = import_module('hooks.' + processor)
                     data = proc.process_accesskey_payload(data)
-                except Exception, ex:
+                except Exception as ex:
                     self.send_response(FORBIDDEN, dict(error=str(ex)))
                     return
 
@@ -66,8 +66,8 @@ class AccessKeysV2Handler(APIBaseHandler):
             key['description'] = data.get('description', '')
             key['created'] = int(time.time())
             key['permission'] = data['permission']
-            key['key'] = md5(str(uuid.uuid4())).hexdigest()
+            key['key'] = md5(str(uuid.uuid4()).encode('utf-8')).hexdigest()
             self.db.keys.insert(key)
             self.send_response(OK, dict(accesskey=key['key']))
-        except Exception, ex:
+        except Exception as ex:
             self.send_response(FORBIDDEN, dict(error=str(ex)))

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -27,7 +27,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from hashlib import md5
-from httplib import BAD_REQUEST, LOCKED, FORBIDDEN, NOT_FOUND, \
+from http.client import BAD_REQUEST, LOCKED, FORBIDDEN, NOT_FOUND, \
     INTERNAL_SERVER_ERROR, OK
 import binascii
 import json
@@ -70,7 +70,7 @@ class APIBaseHandler(tornado.web.RequestHandler):
         """Pre-process HTTP request
         """
         self.appname = None
-        if self.request.headers.has_key('X-An-App-Name'):
+        if 'X-An-App-Name' in self.request.headers:
             """ App name """
             self.appname = self.request.headers['X-An-App-Name'];
 
@@ -78,7 +78,7 @@ class APIBaseHandler(tornado.web.RequestHandler):
             self.appname = filter_alphabetanum(self.get_argument('appname'))
 
         self.appkey = None
-        if self.request.headers.has_key('X-An-App-Key'):
+        if 'X-An-App-Key' in self.request.headers:
             """ App key """
             self.appkey = self.request.headers['X-An-App-Key']
 
@@ -92,7 +92,7 @@ class APIBaseHandler(tornado.web.RequestHandler):
                 try:
                     # Validate token
                     binascii.unhexlify(self.token)
-                except Exception, ex:
+                except Exception as ex:
                     self.send_response(BAD_REQUEST, dict(error='Invalid token: %s' % ex))
         else:
             self.device = DEVICE_TYPE_ANDROID
@@ -122,7 +122,7 @@ class APIBaseHandler(tornado.web.RequestHandler):
             return (self.permission & API_PERMISSIONS[permissionname][0]) == API_PERMISSIONS[permissionname][0]
 
     def check_blockediplist(self, ip, app):
-        if app.has_key('blockediplist') and app['blockediplist']:
+        if 'blockediplist' in app and app['blockediplist']:
             from netaddr import IPNetwork, IPAddress
             iplist = app['blockediplist'].splitlines()
             for blockedip in iplist:
@@ -195,12 +195,13 @@ class APIBaseHandler(tornado.web.RequestHandler):
         log['info'] = strip_tags(info)
         log['level'] = strip_tags(level)
         log['created'] = int(time.time())
-        self.db.logs.insert(log, safe=True)
+        self.db.logs.insert(log)
     def json_decode(self, text):
+        text = text.decode('utf-8')
         try:
             data = json.loads(text)
         except:
-            data = json.loads(urllib.unquote_plus(text))
+            data = json.loads(urllib.parse.unquote_plus(text))
 
         return data
 
@@ -226,12 +227,12 @@ class TokenV1Handler(APIBaseHandler):
             return
 
         try:
-            result = self.db.tokens.remove({'token':token}, safe=True)
+            result = self.db.tokens.remove({'token':token})
             if result['n'] == 0:
                 self.send_response(NOT_FOUND, dict(status='Token does\'t exist'))
             else:
                 self.send_response(OK, dict(status='deleted'))
-        except Exception, ex:
+        except Exception as ex:
             self.send_response(INTERNAL_SERVER_ERROR, dict(error=str(ex)))
 
     def post(self, devicetoken):
@@ -248,14 +249,14 @@ class TokenV1Handler(APIBaseHandler):
                 return
             try:
                 binascii.unhexlify(devicetoken)
-            except Exception, ex:
+            except Exception as ex:
                 self.send_response(BAD_REQUEST, dict(error='Invalid token'))
 
         channel = self.get_argument('channel', 'default')
 
         token = EntityBuilder.build_token(devicetoken, device, self.appname, channel)
         try:
-            result = self.db.tokens.update({'device': device, 'token': devicetoken, 'appname': self.appname}, token, safe=True, upsert=True)
+            result = self.db.tokens.update({'device': device, 'token': devicetoken, 'appname': self.appname}, token, upsert=True)
             # result
             # {u'updatedExisting': True, u'connectionId': 47, u'ok': 1.0, u'err': None, u'n': 1}
             if result['updatedExisting']:
@@ -264,7 +265,7 @@ class TokenV1Handler(APIBaseHandler):
             else:
                 self.send_response(OK, dict(status='ok'))
                 self.add_to_log('Add token', devicetoken)
-        except Exception, ex:
+        except Exception as ex:
             self.add_to_log('Cannot add token', devicetoken, "warning")
             self.send_response(INTERNAL_SERVER_ERROR, dict(error=str(ex)))
 
@@ -300,7 +301,7 @@ class NotificationHandler(APIBaseHandler):
                 return
             try:
                 # TODO check permission to insert
-                self.db.tokens.insert(token, safe=True)
+                self.db.tokens.insert(token)
             except Exception as ex:
                 self.send_response(INTERNAL_SERVER_ERROR, dict(error=str(ex)))
         knownparams = ['alert', 'sound', 'badge', 'token', 'device', 'collapse_key']
@@ -315,7 +316,7 @@ class NotificationHandler(APIBaseHandler):
         self.add_to_log('%s notification' % self.appname, logmessage)
         if device == DEVICE_TYPE_IOS:
             pl = PayLoad(alert=alert, sound=sound, badge=badge, identifier=0, expiry=None, customparams=customparams)
-            if not self.apnsconnections.has_key(self.app['shortname']):
+            if not self.app['shortname'] in self.apnsconnections:
                 # TODO: add message to queue in MongoDB
                 self.send_response(INTERNAL_SERVER_ERROR, dict(error="APNs is offline"))
                 return
@@ -328,7 +329,7 @@ class NotificationHandler(APIBaseHandler):
             try:
                 conn.send(self.token, pl)
                 self.send_response(OK)
-            except Exception, ex:
+            except Exception as ex:
                 self.send_response(INTERNAL_SERVER_ERROR, dict(error=str(ex)))
         elif device == DEVICE_TYPE_ANDROID:
             try:
@@ -374,10 +375,10 @@ class UsersHandler(APIBaseHandler):
             if cursor:
                 self.send_response(BAD_REQUEST, dict(error='Username already exists'))
             else:
-                userid = self.db.users.insert(user, safe=True)
+                userid = self.db.users.insert(user)
                 self.add_to_log('Add user', username)
                 self.send_response(OK, {'userid': str(userid)})
-        except Exception, ex:
+        except Exception as ex:
             self.send_response(INTERNAL_SERVER_ERROR, dict(error=str(ex)))
 
     def get(self):
@@ -390,7 +391,7 @@ class UsersHandler(APIBaseHandler):
             try:
                 # unpack query conditions
                 data = self.json_decode(where)
-            except Exception, ex:
+            except Exception as ex:
                 self.send_response(BAD_REQUEST, dict(error=str(ex)))
 
         cursor = self.db.users.find(data)
@@ -445,7 +446,7 @@ class ObjectHandler(APIBaseHandler):
         """
         self.classname = classname
         self.objectid = ObjectId(objectId)
-        result = self.db[self.collection].remove({'_id': self.objectid}, safe=True)
+        result = self.db[self.collection].remove({'_id': self.objectid})
         self.send_response(OK, dict(result=result))
 
     def put(self, classname, objectId):
@@ -454,7 +455,7 @@ class ObjectHandler(APIBaseHandler):
         self.classname = classname
         data = self.json_decode(self.request.body)
         self.objectid = ObjectId(objectId)
-        result = self.db[self.collection].update({'_id': self.objectid}, data, safe=True)
+        result = self.db[self.collection].update({'_id': self.objectid}, data)
 
     @property
     def collection(self):
@@ -475,7 +476,7 @@ class ClassHandler(APIBaseHandler):
             col['collection'] = self.classname
             col['created'] = int(time.time())
             self.add_to_log('Register collection', self.classname)
-            self.db.objects.insert(col, safe=True)
+            self.db.objects.insert(col)
 
         collectionname = "%s%s" % (options.dbprefix, self.classname)
         return collectionname
@@ -491,7 +492,7 @@ class ClassHandler(APIBaseHandler):
             try:
                 # unpack query conditions
                 data = self.json_decode(where)
-            except Exception, ex:
+            except Exception as ex:
                 self.send_response(BAD_REQUEST, dict(error=str(ex)))
 
         objects = self.db[self.collection].find(data)
@@ -506,11 +507,11 @@ class ClassHandler(APIBaseHandler):
         self.classname = classname
         try:
             data = self.json_decode(self.request.body)
-        except Exception, ex:
+        except Exception as ex:
             self.send_response(BAD_REQUEST, ex)
 
         self.add_to_log('Add object to %s' % self.classname, data)
-        objectId = self.db[self.collection].insert(data, safe=True)
+        objectId = self.db[self.collection].insert(data)
         self.send_response(OK, dict(objectId=objectId))
 
 @route(r"/accesskeys/")
@@ -536,7 +537,7 @@ class AccessKeysV1Handler(APIBaseHandler):
         # This is 1111 in binary means all permissions are granted
         key['permission'] = API_PERMISSIONS['create_token'][0] | API_PERMISSIONS['delete_token'][0] \
                 | API_PERMISSIONS['send_notification'][0] | API_PERMISSIONS['send_broadcast'][0]
-        key['key'] = md5(str(uuid.uuid4())).hexdigest()
+        key['key'] = md5(str(uuid.uuid4()).encode('utf-8')).hexdigest()
         self.db.keys.insert(key)
         self.send_response(OK, dict(accesskey=key['key']))
 

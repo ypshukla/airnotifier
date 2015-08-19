@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -33,7 +33,7 @@ from tornado.options import options
 import os.path
 from tornado.httpclient import AsyncHTTPClient
 from util import *
-from urllib import quote_plus
+from urllib.parse import quote_plus
 
 ENDPOINT='http://api.clickatell.com/http/sendmsg?user=%s&password=%s&api_id=%s&to=%s&text=%s'
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -63,7 +63,7 @@ if __name__ == "__main__":
                 app['gcmprojectnumber'] = ''
             if not 'gcmapikey' in app:
                 app['gcmapikey'] = ''
-            masterdb.applications.update({'_id': appid}, app, safe=True, upsert=True)
+            masterdb.applications.update({'_id': appid}, app, upsert=True)
 
             ## Adding device to token collections
             db = mongodb[appname]
@@ -72,9 +72,9 @@ if __name__ == "__main__":
                 tokenid = ObjectId(token['_id'])
                 if not 'device' in token:
                     token['device'] = DEVICE_TYPE_IOS
-                    result = db['tokens'].update({'_id': tokenid}, token, safe=True, upsert=True)
+                    result = db['tokens'].update({'_id': tokenid}, token, upsert=True)
 
-        r = masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140315}}, safe=True, upsert=True)
+        r = masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140315}}, upsert=True)
         version_object = masterdb['options'].find_one({'name': 'version'})
 
     if version < 20140720:
@@ -93,8 +93,8 @@ if __name__ == "__main__":
                 app['wnstokentype'] = ''
             if not 'wnstokenexpiry' in app:
                 app['wnstokenexpiry'] = ''
-            masterdb.applications.update({'_id': appid}, app, safe=True, upsert=True)
-        masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140720}}, safe=True, upsert=True)
+            masterdb.applications.update({'_id': appid}, app, upsert=True)
+        masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140720}}, upsert=True)
     if version < 20140814:
         ## Don't store fullpath in db, only filename
         import os
@@ -102,14 +102,14 @@ if __name__ == "__main__":
         for app in apps:
             appname = app['shortname']
             appid = ObjectId(app['_id'])
-            if app.has_key('certfile'):
+            if 'certfile' in app:
                 app['certfile'] = os.path.basename(app.get('certfile'))
-            if app.has_key('keyfile'):
+            if 'keyfile' in app:
                 app['keyfile'] = os.path.basename(app.get('keyfile'))
-            if app.has_key('mpnscertificatefile'):
+            if 'mpnscertificatefile' in app:
                 app['mpnscertificatefile'] = os.path.basename(app.get('mpnscertificatefile'))
-            masterdb.applications.update({'_id': appid}, app, safe=True, upsert=True)
-        masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140814}}, safe=True, upsert=True)
+            masterdb.applications.update({'_id': appid}, app, upsert=True)
+        masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140814}}, upsert=True)
 
     if version < 20140820:
         apps = masterdb.applications.find()
@@ -123,8 +123,8 @@ if __name__ == "__main__":
                 app['clickatellpassword'] = ''
             if not 'clickatellappid' in app:
                 app['clickatellappid'] = ''
-            masterdb.applications.update({'_id': appid}, app, safe=True, upsert=True)
-        masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140820}}, safe=True, upsert=True)
+            masterdb.applications.update({'_id': appid}, app, upsert=True)
+        masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140820}}, upsert=True)
 
     version_object = masterdb['options'].find_one({'name': 'version'})
     version = version_object['value']

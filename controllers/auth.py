@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -45,7 +45,8 @@ class AuthHandler(WebBaseHandler):
         else:
             username = self.get_argument('username', None)
             password = self.get_argument('password', None)
-            passwordhash = sha1("%s%s" % (options.passwordsalt, password)).hexdigest()
+            temp = '{}{}'.format(options.passwordsalt, password)
+            passwordhash = sha1(temp.encode('utf-8')).hexdigest()
             user = self.masterdb.managers.find_one({'username': username, 'password': passwordhash})
             if user:
                 self.set_secure_cookie('user', str(user['_id']))

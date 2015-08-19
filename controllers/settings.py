@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -66,7 +66,6 @@ class AppHandler(WebBaseHandler):
             if not file_exists(app.get('mpnscertificatefile', '')):
                 app['mpnscertificatefile'] = None
             if not app:
-
                 self.finish("Application doesn't exist")
                 # self.redirect(r"/applications/new")
                 # raise tornado.web.HTTPError(500)
@@ -103,15 +102,15 @@ class AppHandler(WebBaseHandler):
 
             # Update app details
             if self.request.files:
-                if self.request.files.has_key('appcertfile'):
+                if 'appcertfile' in self.request.files:
                     rm_file(app.get('certfile', None))
                     app['certfile'] = save_file(self.request.files['appcertfile'][0])
 
-                if self.request.files.has_key('appkeyfile'):
+                if 'appkeyfile' in self.request.files:
                     rm_file(app.get('keyfile', None))
                     app['keyfile'] = save_file(self.request.files['appkeyfile'][0])
 
-                if self.request.files.has_key('mpnscertificatefile'):
+                if 'mpnscertificatefile' in self.request.files:
                     rm_file(app.get('mpnscertificatefile', None))
                     app['mpnscertificatefile'] = save_file(self.request.files['mpnscertificatefile'][0])
                     ## Update connections
@@ -226,8 +225,8 @@ class AppHandler(WebBaseHandler):
             if updateclickatell:
                 pass
 
-            self.masterdb.applications.update({'shortname': self.appname}, app, safe=True)
+            self.masterdb.applications.update({'shortname': self.appname}, app)
             self.redirect(r"/applications/%s/settings" % self.appname)
-        except Exception, ex:
+        except Exception as ex:
             logging.error(traceback.format_exc())
             self.render("app_settings.html", app=app, error=str(ex))

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012, Dongsheng Cai
@@ -66,7 +66,7 @@ class AppAccessKeysHandler(WebBaseHandler):
         key['permission'] = result
         # make key as shorter as possbile
         if action == 'create':
-            key['key'] = md5(str(uuid.uuid4())).hexdigest()
+            key['key'] = md5(str(uuid.uuid4()).encode('utf-8')).hexdigest()
             # Alternative key generator, this is SHORT
             # crc = binascii.crc32(str(uuid.uuid4())) & 0xffffffff
             # key['key'] = '%08x' % crc
@@ -74,6 +74,6 @@ class AppAccessKeysHandler(WebBaseHandler):
             self.redirect("/applications/%s/keys" % appname)
         else:
             key['key'] = self.get_argument('accesskey').strip()
-            self.db.keys.update({'key': key['key']}, key, safe=True)
+            self.db.keys.update({'key': key['key']}, key)
             self.redirect("/applications/%s/keys" % appname)
 
