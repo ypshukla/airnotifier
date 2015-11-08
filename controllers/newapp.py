@@ -61,7 +61,7 @@ class AppCreateNewHandler(WebBaseHandler):
 
         current_app = self.masterdb.applications.find_one({'shortname': self.appname})
         if not current_app:
-            self.masterdb.applications.insert(app)
+            self.masterdb.applications.insert_one(app)
             indexes = [("created", DESCENDING)]
             self.db['tokens'].create_index(indexes);
             self.db['logs'].create_index(indexes);

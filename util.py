@@ -121,6 +121,7 @@ def filter_alphabetanum(string):
     return string
 
 def error_log(log):
+    logging.error(log)
     sys.stderr.write(log)
 
 def get_filepath(filename):
@@ -152,3 +153,16 @@ def rm_file(filename):
         os.remove(filename)
     elif os.path.isfile(fullpath):
         os.remove(fullpath)
+
+def check_environment():
+    from constants import VERSION
+    import pymongo
+    if VERSION > 20151107:
+        # AirNoitifier 20151108 uses pymongo 3.1+
+        expectedversion = 3.1
+        pymongoversion = float(pymongo.version)
+        if pymongoversion < expectedversion:
+            error_log("You are using pymongo %s, please upgrade to %s" %
+                    (pymongo.version, expectedversion))
+            error_log("Please run: pip install -r requirements.txt")
+            exit(1)

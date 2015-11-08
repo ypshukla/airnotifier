@@ -28,7 +28,12 @@
 
 import logging.config
 
-from pymongo.connection import Connection
+import pymongo
+try:
+    from pymongo.connection import Connection as MongoClient
+except ImportError:
+    from pymongo import MongoClient
+
 from tornado.options import define
 import tornado.httpserver
 import tornado.ioloop
@@ -42,7 +47,7 @@ from pushservices.clickatell import *
 from uimodules import *
 from util import *
 from constants import DEVICE_TYPE_IOS, DEVICE_TYPE_ANDROID, DEVICE_TYPE_WNS, \
-    DEVICE_TYPE_MPNS
+    DEVICE_TYPE_MPNS, VERSION
 
 define("port", default=8801, help="Application server listen port", type=int)
 
@@ -173,17 +178,16 @@ class AirNotifierApp(tornado.web.Application):
 
         tornado.web.Application.__init__(self, sitehandlers + apihandlers, **app_settings)
 
-        mongodb = None
-        while not mongodb:
+        _mongodb = None
+        while not _mongodb:
             try:
-                mongodb = Connection(options.mongohost, options.mongoport)
+                _mongodb = MongoClient(options.mongohost, options.mongoport)
             except:
                 error_log("Cannot not connect to MongoDB")
 
-        self.mongodb = mongodb
+        self.mongodb = _mongodb
 
-        self.masterdb = mongodb[options.masterdb]
-        assert self.masterdb.connection == self.mongodb
+        self.masterdb = self.mongodb[options.masterdb]
 
     def main(self):
         _logger.info("Starting AirNotifier server")
@@ -193,7 +197,7 @@ class AirNotifierApp(tornado.web.Application):
                 ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
                 ssl_ctx.load_cert_chain(options.httpscertfile, options.httpskeyfile)
             except IOError:
-                print("Invalid path to SSL certificate and private key")
+                error_log("Invalid path to SSL certificate and private key")
                 raise
             http_server = tornado.httpserver.HTTPServer(self, ssl_options=ssl_ctx)
         else:
@@ -217,7 +221,7 @@ def init_messaging_agents():
     mongodb = None
     while not mongodb:
         try:
-            mongodb = Connection(options.mongohost, options.mongoport)
+            mongodb = MongoClient(options.mongohost, options.mongoport)
         except Exception as ex:
             _logger.error(ex)
     masterdb = mongodb[options.masterdb]
@@ -281,5 +285,6 @@ def init_messaging_agents():
 if __name__ == "__main__":
     tornado.options.parse_config_file("airnotifier.conf")
     tornado.options.parse_command_line()
+    check_environment()
     services = init_messaging_agents()
     AirNotifierApp(services=services).main()

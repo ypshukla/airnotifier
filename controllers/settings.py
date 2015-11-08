@@ -226,7 +226,7 @@ class AppHandler(WebBaseHandler):
             if updateclickatell:
                 pass
 
-            self.masterdb.applications.update({'shortname': self.appname}, app, safe=True)
+            self.masterdb.applications.replace_one({'shortname': self.appname}, app)
             self.redirect(r"/applications/%s/settings" % self.appname)
         except Exception as ex:
             logging.error(traceback.format_exc())

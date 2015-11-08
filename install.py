@@ -73,7 +73,7 @@ if __name__ == "__main__":
         manager = {}
         manager['username'] = 'admin'
         manager['password'] = sha1('%sadmin' % options.passwordsalt).hexdigest()
-        masterdb['managers'].insert(manager)
+        masterdb['managers'].insert_one(manager)
         print("Admin user created, username: admin, password: admin")
     except Exception:
         print("Failed to create admin user")
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         option_ver = {}
         option_ver['name'] = 'version'
         option_ver['value'] = VERSION
-        masterdb['options'].insert(option_ver)
+        masterdb['options'].insert_one(option_ver)
         print("Version number written: %s" % VERSION)
     except Exception:
         print("Failed to write version number")

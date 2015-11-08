@@ -35,6 +35,9 @@ from pymongo import DESCENDING
 from util import *
 from tornado.options import options
 import sys
+import logging
+
+_logger = logging.getLogger(__name__)
 
 def buildUpdateFields(params):
     """Join fields and values for SQL update statement
@@ -134,8 +137,8 @@ class AppDeletionHandler(WebBaseHandler):
         self.appname = appname
         app = self.masterdb.applications.find_one({'shortname':appname})
         if not app: raise tornado.web.HTTPError(500)
-        self.masterdb.applications.remove({'shortname': appname}, safe=True)
-        self.mongodbconnection.drop_database(appname)
+        self.masterdb.applications.delete_one({'shortname': appname})
+        self.mongodbconnection.drop_database(self.dbname)
         self.redirect(r"/applications")
 
 @route(r"/applications/([^/]+)/logs")
@@ -157,7 +160,8 @@ class AppLogViewHandler(WebBaseHandler):
         self.appname = appname
         now = int(time.time())
         thirtydaysago = now - 60 * 60 * 24
-        self.db.logs.remove({ 'created': { '$lt': thirtydaysago } })
+        result = self.db.logs.delete_many({ 'created': { '$lt': thirtydaysago } })
+        _logger.info("%d record(s) has been deleted from logs" % result.deleted_count)
         self.redirect(r"/applications/%s/logs" % appname)
 
 @route(r"/applications/([^/]+)/objects")
@@ -225,7 +229,7 @@ class AdminHandler(WebBaseHandler):
         if self.get_argument('delete', None):
             user_id = self.get_argument('delete', None)
             if user_id:
-                self.masterdb.managers.remove({'_id':ObjectId(user_id)})
+                self.masterdb.managers.delete_one({'_id':ObjectId(user_id)})
                 self.redirect("/admin/managers")
                 return
         managers = self.masterdb.managers.find()
@@ -241,16 +245,16 @@ class AdminHandler(WebBaseHandler):
             passwordhash = sha1("%s%s" % (options.passwordsalt, password)).hexdigest()
             user['password'] = passwordhash
             user['level'] = "manager"
-            result = self.masterdb.managers.update({'username': user['username']}, user, safe=True, upsert=True)
+            result = self.masterdb.managers.replace_one({'username': user['username']}, user, upsert=True)
             managers = self.masterdb.managers.find()
-            if result['updatedExisting']:
+            if result.matched_count:
                 self.render('managers.html', managers=managers, updated=user, created=None, currentuser=self.currentuser)
             else:
                 self.render('managers.html', managers=managers, updated=None, created=user, currentuser=self.currentuser)
         elif action == 'changepassword':
             password = self.get_argument('newpassword').strip()
             passwordhash = sha1("%s%s" % (options.passwordsalt, password)).hexdigest()
-            self.masterdb.managers.update({"username": self.currentuser['username']}, {"$set": {"password": passwordhash}})
+            self.masterdb.managers.update_one({"username": self.currentuser['username']}, {"$set": {"password": passwordhash}})
             managers = self.masterdb.managers.find()
             user = self.currentuser
             self.render('managers.html', managers=managers, updated=user, created=None, currentuser=self.currentuser)

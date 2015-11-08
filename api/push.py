@@ -102,7 +102,7 @@ class PushHandler(APIBaseHandler):
                     return
                 try:
                     # TODO check permission to insert
-                    self.db.tokens.insert(token, safe=True)
+                    self.db.tokens.insert_one(token)
                 except Exception as ex:
                     self.send_response(INTERNAL_SERVER_ERROR, dict(error=str(ex)))
 
@@ -159,4 +159,3 @@ class PushHandler(APIBaseHandler):
             import traceback
             traceback.print_exc()
             self.send_response(INTERNAL_SERVER_ERROR, dict(error=str(ex)))
-

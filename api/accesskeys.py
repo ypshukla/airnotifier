@@ -73,7 +73,7 @@ class AccessKeysV2Handler(APIBaseHandler):
             key['created'] = int(time.time())
             key['permission'] = data['permission']
             key['key'] = md5(str(uuid.uuid4())).hexdigest()
-            self.db.keys.insert(key)
+            self.db.keys.insert_one(key)
             self.send_response(OK, dict(accesskey=key['key']))
         except Exception as ex:
             self.send_response(FORBIDDEN, dict(error=str(ex)))

@@ -100,7 +100,7 @@ class WNSClient(PushService):
         accesstoken = responsedata['access_token']
         self.app['wnsaccesstoken'] = accesstoken
         self.app['wnstokenexpiry'] = int(responsedata['expires_in']) + int(time.time())
-        self.masterdb.applications.update({'shortname': self.app['shortname']}, self.app, safe=True)
+        self.masterdb.applications.replace_one({'shortname': self.app['shortname']}, self.app)
         return accesstoken
 
 class WNSBase(object):

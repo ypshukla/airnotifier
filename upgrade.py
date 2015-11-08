@@ -29,9 +29,14 @@
 import logging
 import tornado
 import os
-from pymongo import *
+import pymongo
+from util import *
+try:
+    from pymongo.connection import Connection as MongoClient
+except ImportError:
+    from pymongo import MongoClient
 from bson import *
-from constants import *
+from constants import VERSION
 from tornado.options import define, options
 
 define("apns", default=(), help="APNs address and port")
@@ -45,20 +50,31 @@ define("masterdb", default="airnotifier", help="MongoDB DB to store information"
 define("collectionprefix", default="obj_", help="Collection name prefix")
 define("appprefix", default="", help="DB name prefix")
 
+MONGO = MongoClient(options.mongohost, options.mongoport)
+ANDB = MONGO[options.masterdb]
+
+def bump_db_version(version):
+    ANDB['options'].update_one({'name': 'version'}, {'$set': {'value': version}}, upsert=True)
+
+def get_db_version():
+    version_object = ANDB['options'].find_one({'name': 'version'})
+    return version_object['value']
+
 if __name__ == "__main__":
     curpath = os.path.dirname(os.path.realpath(__file__))
-
     tornado.options.parse_config_file("%s/airnotifier.conf" % curpath)
     tornado.options.parse_command_line()
-    mongodb = Connection(options.mongohost, options.mongoport)
-    masterdb = mongodb[options.masterdb]
-    version_object = masterdb['options'].find_one({'name': 'version'})
+
+    check_environment()
+
+    # XXX: DEBUG remove line below in production
+    #bump_db_version(20000000)
+
+    version = get_db_version()
     appprefix = options.appprefix
 
-    version = version_object['value']
-
     if version < 20140315:
-        apps = masterdb.applications.find()
+        apps = ANDB['applications'].find()
         for app in apps:
             appname = app['shortname']
             appid = ObjectId(app['_id'])
@@ -71,22 +87,20 @@ if __name__ == "__main__":
                 app['gcmprojectnumber'] = ''
             if not 'gcmapikey' in app:
                 app['gcmapikey'] = ''
-            masterdb.applications.update({'_id': appid}, app, safe=True, upsert=True)
+            ANDB['applications'].replace_one({'_id': appid}, app)
 
             ## Adding device to token collections
-            db = mongodb[appprefix + appname]
+            db = MONGO[appprefix + appname]
             tokens = db['tokens'].find()
             for token in tokens:
                 tokenid = ObjectId(token['_id'])
                 if not 'device' in token:
                     token['device'] = DEVICE_TYPE_IOS
-                    result = db['tokens'].update({'_id': tokenid}, token, safe=True, upsert=True)
-
-        r = masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140315}}, safe=True, upsert=True)
-        version_object = masterdb['options'].find_one({'name': 'version'})
+                    result = db['tokens'].replace_one({'_id': tokenid}, token)
+        bump_db_version(20140315)
 
     if version < 20140720:
-        apps = masterdb.applications.find()
+        apps = ANDB['applications'].find()
         for app in apps:
             appname = app['shortname']
             appid = ObjectId(app['_id'])
@@ -101,13 +115,13 @@ if __name__ == "__main__":
                 app['wnstokentype'] = ''
             if not 'wnstokenexpiry' in app:
                 app['wnstokenexpiry'] = ''
-            masterdb.applications.update({'_id': appid}, app, safe=True, upsert=True)
-        masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140720}}, safe=True, upsert=True)
+            ANDB['applications'].replace_one({'_id': appid}, app)
+        bump_db_version(20140720)
 
     if version < 20140814:
         ## Don't store fullpath in db, only filename
         import os
-        apps = masterdb.applications.find()
+        apps = ANDB['applications'].find()
         for app in apps:
             appname = app['shortname']
             appid = ObjectId(app['_id'])
@@ -117,11 +131,11 @@ if __name__ == "__main__":
                 app['keyfile'] = os.path.basename(app.get('keyfile'))
             if app.has_key('mpnscertificatefile'):
                 app['mpnscertificatefile'] = os.path.basename(app.get('mpnscertificatefile'))
-            masterdb.applications.update({'_id': appid}, app, safe=True, upsert=True)
-        masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140814}}, safe=True, upsert=True)
+            ANDB['applications'].replace_one({'_id': appid}, app)
+        bump_db_version(20140814)
 
     if version < 20140820:
-        apps = masterdb.applications.find()
+        apps = ANDB['applications'].find()
         for app in apps:
             appname = app['shortname']
             appid = ObjectId(app['_id'])
@@ -132,24 +146,25 @@ if __name__ == "__main__":
                 app['clickatellpassword'] = ''
             if not 'clickatellappid' in app:
                 app['clickatellappid'] = ''
-            masterdb.applications.update({'_id': appid}, app, safe=True, upsert=True)
-        masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20140820}}, safe=True, upsert=True)
+            ANDB['applications'].replace_one({'_id': appid}, app)
+        bump_db_version(20140820)
 
     if version < 20151101:
-        apps = masterdb.applications.find()
+        apps = ANDB['applications'].find()
         for app in apps:
             appname = app['shortname']
-            db = mongodb[appprefix + appname]
-            indexes = [("created", DESCENDING)]
-            print("Adding index to %s%s['tokens'].%s" % (appprefix, appname,
+            db = MONGO[appprefix + appname]
+            indexes = [("created", pymongo.DESCENDING)]
+            logging.info("Adding index to %s%s['tokens'].%s" % (appprefix, appname,
                 "created"))
             db['tokens'].create_index(indexes)
-            print("Adding index to %s%s['logs'].%s" % (appprefix, appname,
+            logging.info("Adding index to %s%s['logs'].%s" % (appprefix, appname,
                 "created"))
             db['logs'].create_index(indexes)
+        bump_db_version(20151101)
 
-        masterdb['options'].update({'name': 'version'}, {'$set': {'value': 20151101}}, safe=True, upsert=True)
+    # bump to current version
+    bump_db_version(VERSION)
 
-    version_object = masterdb['options'].find_one({'name': 'version'})
-    version = version_object['value']
+    version = get_db_version()
     logging.info("You're using version: %d" % version)

@@ -48,8 +48,8 @@ class TokenV2HandlerGet(APIBaseHandler):
             return
 
         try:
-            result = self.db.tokens.remove({'token':token}, safe=True)
-            if result['n'] == 0:
+            result = self.db.tokens.delete_many({'token':token})
+            if result.deleted_count == 0:
                 self.send_response(NOT_FOUND, dict(status='Token does\'t exist'))
             else:
                 self.send_response(OK, dict(status='deleted'))
@@ -81,7 +81,7 @@ class TokenV2Handler(APIBaseHandler):
 
         token = EntityBuilder.build_token(devicetoken, device, self.appname, channel)
         try:
-            result = self.db.tokens.update({'device': device, 'token': devicetoken, 'appname': self.appname}, token, safe=True, upsert=True)
+            result = self.db.tokens.replace_one({'device': device, 'token': devicetoken, 'appname': self.appname}, token, upsert=True)
             # result
             # {u'updatedExisting': True, u'connectionId': 47, u'ok': 1.0, u'err': None, u'n': 1}
             if result['updatedExisting']:

@@ -46,9 +46,15 @@ class AppAccessKeysHandler(WebBaseHandler):
             self.render("app_edit_key.html", app=app, keys=keys, key=key, map=API_PERMISSIONS.items())
             return
         if key_to_be_deleted:
-            self.db.keys.remove({'key':key_to_be_deleted})
+            self.db.keys.delete_one({'key': key_to_be_deleted})
             self.redirect("/applications/%s/keys" % appname)
-        self.render("app_keys.html", app=app, keys=keys, newkey=None, map=API_PERMISSIONS.items())
+            return
+        self.render("app_keys.html",
+                app=app,
+                keys=keys,
+                newkey=None,
+                map=API_PERMISSIONS.items())
+
     @tornado.web.authenticated
     def post(self, appname):
         self.appname = appname
@@ -70,10 +76,9 @@ class AppAccessKeysHandler(WebBaseHandler):
             # Alternative key generator, this is SHORT
             # crc = binascii.crc32(str(uuid.uuid4())) & 0xffffffff
             # key['key'] = '%08x' % crc
-            keyObjectId = self.db.keys.insert(key)
+            keyObjectId = self.db.keys.insert_one(key)
             self.redirect("/applications/%s/keys" % appname)
         else:
             key['key'] = self.get_argument('accesskey').strip()
-            self.db.keys.update({'key': key['key']}, key, safe=True)
+            self.db.keys.replace_one({'key': key['key']}, key)
             self.redirect("/applications/%s/keys" % appname)
-
