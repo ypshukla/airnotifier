@@ -42,6 +42,8 @@ from constants import (
     DEVICE_TYPE_MPNS,
     DEVICE_TYPE_SMS,
     DEVICE_TYPE_FCM,
+    DEVICE_TYPE_IOS_FCM,
+    DEVICE_TYPE_ANDROID_FCM,
 )
 from pushservices.gcm import (
     GCMUpdateRegIDsException,
@@ -172,7 +174,7 @@ class PushHandler(APIBaseHandler):
                 else:
                     _logger.error("no active apns connection")
                 self.send_response(ACCEPTED)
-            elif device == DEVICE_TYPE_FCM:
+	    elif device == DEVICE_TYPE_FCM or device == DEVICE_TYPE_IOS_FCM or device == DEVICE_TYPE_ANDROID_FCM:
                 requestPayload.setdefault("fcm", {})
                 try:
                     fcm = self.fcmconnections[self.app["shortname"]][0]
